@@ -105,6 +105,9 @@ model User {
   communityPosts CommunityPost[]
   groupOrderParticipations GroupOrderParticipation[]
   advertisements Advertisement[]
+  visitorInvites VisitorInvite[]
+  accessLogs     AccessLog[]
+  respondedVisitorRequests VisitorRequest[] @relation("RespondedRequests")
 
   @@map("users")
 }
@@ -354,4 +357,146 @@ model CouncilMeeting {
   updatedAt   DateTime @updatedAt
 
   @@map("council_meetings")
+}
+
+// ============================================
+// ACCESS CONTROL SYSTEM
+// ============================================
+
+enum AccessPointType {
+  MAIN_LOBBY
+  SIDE_ENTRANCE
+  CAR_PARK
+  POOL_AREA
+  GYM
+}
+
+enum AccessPointStatus {
+  ONLINE
+  OFFLINE
+  MAINTENANCE
+}
+
+enum VisitorInviteStatus {
+  PENDING
+  ACTIVE
+  USED
+  EXPIRED
+  CANCELLED
+}
+
+enum AccessLogAction {
+  UNLOCK_REQUEST
+  UNLOCK_SUCCESS
+  UNLOCK_FAILED
+  VISITOR_CHECKIN
+  VISITOR_CHECKOUT
+  EMERGENCY_UNLOCK
+  SYSTEM_LOCK
+}
+
+model AccessPoint {
+  id            String            @id @default(cuid())
+  name          String            // e.g., "Main Lobby", "Side Gate A"
+  type          AccessPointType
+  location      String?           // Physical location description
+  deviceId      String?           // Hardware device ID for API integration
+  status        AccessPointStatus @default(OFFLINE)
+  lastHeartbeat DateTime?
+  isActive      Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  accessLogs      AccessLog[]
+  visitorAccess   VisitorAccessPoint[]
+  visitorRequests VisitorRequest[]
+
+  @@map("access_points")
+}
+
+model VisitorInvite {
+  id              String              @id @default(cuid())
+  inviteCode      String              @unique // 6-digit code for visitor entry
+  hostUserId      String
+  visitorName     String
+  visitorPhone    String?
+  visitorEmail    String?
+  purpose         String?             // e.g., "Delivery", "Guest", "Contractor"
+  vehiclePlate    String?             // For car park access
+  validFrom       DateTime
+  validUntil      DateTime
+  maxEntries      Int                 @default(1) // How many times code can be used
+  entriesUsed     Int                 @default(0)
+  status          VisitorInviteStatus @default(PENDING)
+  notifyOnArrival Boolean             @default(true)
+  notes           String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  hostUser      User                 @relation(fields: [hostUserId], references: [id])
+  accessPoints  VisitorAccessPoint[]
+  accessLogs    AccessLog[]
+
+  @@map("visitor_invites")
+}
+
+model VisitorAccessPoint {
+  id              String   @id @default(cuid())
+  visitorInviteId String
+  accessPointId   String
+  createdAt       DateTime @default(now())
+
+  visitorInvite VisitorInvite @relation(fields: [visitorInviteId], references: [id], onDelete: Cascade)
+  accessPoint   AccessPoint   @relation(fields: [accessPointId], references: [id])
+
+  @@unique([visitorInviteId, accessPointId])
+  @@map("visitor_access_points")
+}
+
+model AccessLog {
+  id              String          @id @default(cuid())
+  accessPointId   String
+  userId          String?         // Resident who triggered the action
+  visitorInviteId String?         // If triggered by visitor code
+  action          AccessLogAction
+  success         Boolean         @default(true)
+  ipAddress       String?
+  userAgent       String?
+  metadata        Json?           // Additional data (e.g., video snapshot URL)
+  createdAt       DateTime        @default(now())
+
+  accessPoint   AccessPoint    @relation(fields: [accessPointId], references: [id])
+  user          User?          @relation(fields: [userId], references: [id])
+  visitorInvite VisitorInvite? @relation(fields: [visitorInviteId], references: [id])
+
+  @@map("access_logs")
+}
+
+// Walk-up visitor request (for visitors who scan QR at entrance)
+enum VisitorRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+  EXPIRED
+  CANCELLED
+}
+
+model VisitorRequest {
+  id              String               @id @default(cuid())
+  requestCode     String               @unique // Short code for tracking
+  accessPointId   String               // Which entrance they're at
+  targetUnit      String               // Unit number they want to visit (e.g., "#05-12")
+  visitorName     String
+  visitorPhone    String?
+  purpose         String?
+  status          VisitorRequestStatus @default(PENDING)
+  respondedById   String?              // Resident who responded
+  respondedAt     DateTime?
+  expiresAt       DateTime             // Request expires after X minutes
+  createdAt       DateTime             @default(now())
+
+  accessPoint   AccessPoint @relation(fields: [accessPointId], references: [id])
+  respondedBy   User?       @relation("RespondedRequests", fields: [respondedById], references: [id])
+
+  @@map("visitor_requests")
 }

@@ -14,12 +14,14 @@ import {
   Menu,
   X,
   Settings,
+  DoorOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
 const sidebarItems = [
   { href: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/admin/access", icon: DoorOpen, label: "Access Control" },
   { href: "/admin/approvals", icon: CheckSquare, label: "Approvals" },
   { href: "/admin/residents", icon: Users, label: "Residents" },
   { href: "/admin/fees", icon: DollarSign, label: "Maintenance Fees" },

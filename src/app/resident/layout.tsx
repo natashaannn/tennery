@@ -13,7 +13,8 @@ import {
   ShoppingBag,
   LogOut,
   Menu,
-  X
+  X,
+  DoorOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -21,6 +22,7 @@ import { MobileNav } from "@/components/layout/mobile-nav";
 
 const sidebarItems = [
   { href: "/resident/dashboard", icon: Home, label: "Dashboard" },
+  { href: "/resident/access", icon: DoorOpen, label: "Access Control" },
   { href: "/resident/bookings", icon: Calendar, label: "Facility Booking" },
   { href: "/resident/eforms", icon: FileText, label: "eForms" },
   { href: "/resident/payments", icon: CreditCard, label: "Payments" },
