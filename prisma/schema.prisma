@@ -1,0 +1,357 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  PUBLIC
+  RESIDENT
+  COUNCIL
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum FacilityCategory {
+  PRIMARY
+  SECONDARY
+}
+
+enum BookerType {
+  RESIDENT
+  PUBLIC
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+}
+
+enum EFormType {
+  BULKY_ITEM
+  RENOVATION
+  MOVING_IN
+  MOVING_OUT
+}
+
+enum EFormStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum NoticeCategory {
+  GENERAL
+  MAINTENANCE
+  EMERGENCY
+  EVENT
+  MEETING
+}
+
+enum GroupOrderStatus {
+  OPEN
+  CLOSED
+  DELIVERED
+  CANCELLED
+}
+
+enum AdvertisementType {
+  DIGITAL
+  PHYSICAL
+  GROUP_ORDER
+}
+
+enum AdvertisementStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ACTIVE
+  EXPIRED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  phone         String?
+  name          String?
+  unitNumber    String?
+  role          UserRole  @default(PUBLIC)
+  passwordHash  String?
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  bookings       Booking[]
+  eForms         EForm[]
+  notices        Notice[]        @relation("AuthoredNotices")
+  communityPosts CommunityPost[]
+  groupOrderParticipations GroupOrderParticipation[]
+  advertisements Advertisement[]
+
+  @@map("users")
+}
+
+model Facility {
+  id                    String           @id @default(cuid())
+  name                  String
+  description           String?
+  images                String[]
+  capacity              Int?
+  category              FacilityCategory @default(PRIMARY)
+  freeQuotaPerMonth     Int              @default(1)  // Free bookings per resident per month
+  residentChargeAfterQuota Float         @default(20) // Charge after free quota exhausted
+  publicHourlyRate      Float            @default(25) // Hourly rate for public bookings
+  depositAmount         Float            @default(0)
+  bookingRules          Json?
+  isActive              Boolean          @default(true)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  bookings  Booking[]
+  timeSlots FacilityTimeSlot[]
+
+  @@map("facilities")
+}
+
+model FacilityTimeSlot {
+  id          String   @id @default(cuid())
+  facilityId  String
+  name        String   // e.g., "Morning Session", "Evening Session"
+  startTime   String   // e.g., "10:00"
+  endTime     String   // e.g., "15:00"
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  facility Facility @relation(fields: [facilityId], references: [id])
+
+  @@map("facility_time_slots")
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  oderId          String?       // For public bookings without user account
+  bookerType      BookerType    @default(RESIDENT)
+  bookerName      String?       // For public bookings
+  bookerEmail     String?       // For public bookings
+  bookerPhone     String?       // For public bookings
+  userId          String?
+  facilityId      String
+  date            DateTime
+  startTime       String
+  endTime         String
+  isCustomTime    Boolean       @default(false) // True if custom time requested
+  status          BookingStatus @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+  depositStatus   PaymentStatus @default(PENDING)
+  totalAmount     Float         @default(0)
+  depositAmount   Float         @default(0)
+  hoursBooked     Float         @default(0)    // For calculating public charges
+  isFreeQuota     Boolean       @default(false) // True if using resident free quota
+  paynowReference String?
+  notes           String?
+  adminNotes      String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user     User?    @relation(fields: [userId], references: [id])
+  facility Facility @relation(fields: [facilityId], references: [id])
+
+  @@map("bookings")
+}
+
+model EForm {
+  id            String        @id @default(cuid())
+  userId        String
+  type          EFormType
+  details       Json
+  attachments   String[]
+  status        EFormStatus   @default(DRAFT)
+  depositAmount Float         @default(0)
+  paymentStatus PaymentStatus @default(PENDING)
+  paynowReference String?
+  adminNotes    String?
+  submittedAt   DateTime?
+  processedAt   DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("eforms")
+}
+
+model MaintenanceFee {
+  id              String        @id @default(cuid())
+  unitNumber      String
+  amount          Float
+  period          String
+  dueDate         DateTime
+  paidDate        DateTime?
+  status          PaymentStatus @default(PENDING)
+  paynowReference String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("maintenance_fees")
+}
+
+model Notice {
+  id             String         @id @default(cuid())
+  title          String
+  content        String
+  category       NoticeCategory @default(GENERAL)
+  attachments    String[]
+  publishedAt    DateTime       @default(now())
+  expiresAt      DateTime?
+  isPinned       Boolean        @default(false)
+  authorId       String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  author User? @relation("AuthoredNotices", fields: [authorId], references: [id])
+
+  @@map("notices")
+}
+
+model CommunityPost {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  content   String
+  images    String[]
+  likes     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User              @relation(fields: [userId], references: [id])
+  comments CommunityComment[]
+
+  @@map("community_posts")
+}
+
+model CommunityComment {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("community_comments")
+}
+
+model GroupOrder {
+  id            String           @id @default(cuid())
+  title         String
+  vendor        String
+  description   String?
+  images        String[]
+  minOrders     Int              @default(1)
+  pricePerUnit  Float
+  deadline      DateTime
+  deliveryDate  DateTime?
+  status        GroupOrderStatus @default(OPEN)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  participations GroupOrderParticipation[]
+
+  @@map("group_orders")
+}
+
+model GroupOrderParticipation {
+  id           String        @id @default(cuid())
+  groupOrderId String
+  userId       String
+  quantity     Int           @default(1)
+  totalAmount  Float
+  paymentStatus PaymentStatus @default(PENDING)
+  paynowReference String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  groupOrder GroupOrder @relation(fields: [groupOrderId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id])
+
+  @@unique([groupOrderId, userId])
+  @@map("group_order_participations")
+}
+
+model Advertisement {
+  id           String              @id @default(cuid())
+  userId       String?
+  businessName String
+  contactEmail String
+  contactPhone String?
+  type         AdvertisementType
+  title        String
+  description  String
+  images       String[]
+  duration     Int                 @default(30)
+  status       AdvertisementStatus @default(PENDING)
+  submittedAt  DateTime            @default(now())
+  approvedAt   DateTime?
+  expiresAt    DateTime?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("advertisements")
+}
+
+model VendorContract {
+  id              String    @id @default(cuid())
+  vendorName      String
+  serviceType     String
+  description     String?
+  startDate       DateTime
+  endDate         DateTime
+  contractValue   Float?
+  documents       String[]
+  contactPerson   String?
+  contactEmail    String?
+  contactPhone    String?
+  renewalReminder DateTime?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("vendor_contracts")
+}
+
+model CouncilMeeting {
+  id          String   @id @default(cuid())
+  title       String
+  date        DateTime
+  location    String?
+  agenda      String?
+  minutesUrl  String?
+  attendees   String[]
+  actionItems Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("council_meetings")
+}

@@ -1,26 +1,115 @@
 @import "tailwindcss";
 
+/* Palomar Font Family - Logo Font */
+@font-face {
+  font-family: 'Palomar';
+  src: url('/palomar-font-family/palomar-light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Palomar';
+  src: url('/palomar-font-family/palomar-light-italic.otf') format('opentype');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Palomar';
+  src: url('/palomar-font-family/palomar.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Palomar';
+  src: url('/palomar-font-family/palomar-italic.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Palomar';
+  src: url('/palomar-font-family/palomar-bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Palomar';
+  src: url('/palomar-font-family/palomar-bold-italic.otf') format('opentype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Color Palette */
+  --color-white: #FFFFFF;
+  --color-gray: #939497;
+  --color-magenta: #BA006F;
+  --color-charcoal: #58595B;
+  --color-off-white: #FDFBFC;
+  
+  --background: #FDFBFC;
+  --foreground: #58595B;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-primary: #BA006F;
+  --color-primary-dark: #8a0052;
+  --color-primary-light: #d4338f;
+  --color-secondary: #939497;
+  --color-muted: #939497;
+  --font-sans: var(--font-roboto);
+  --font-display: 'Palomar', serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Logo/Display font utility class */
+.font-display {
+  font-family: 'Palomar', serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
