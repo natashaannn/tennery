@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ const purposeOptions = [
 
 type RequestStatus = "idle" | "submitting" | "waiting" | "approved" | "denied" | "expired";
 
-export default function VisitorAccessPage() {
+function VisitorAccessContent() {
   const searchParams = useSearchParams();
   const entranceId = searchParams.get("entrance") || "ap-1";
   
@@ -372,5 +372,24 @@ export default function VisitorAccessPage() {
         <p>© 2026 The Tennery. All rights reserved.</p>
       </footer>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-[#BA006F]/10 to-white flex items-center justify-center">
+      <div className="text-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[#BA006F] mx-auto mb-4" />
+        <p className="text-gray-500">Loading...</p>
+      </div>
+    </div>
+  );
+}
+
+export default function VisitorAccessPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <VisitorAccessContent />
+    </Suspense>
   );
 }
